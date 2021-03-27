@@ -29,17 +29,26 @@ downs = tk.IntVar(value=1)
 length = tk.IntVar(value=20)
 
 def password():
+    '''
+    This is a call for a random password
+    '''
     global text
     text = gen.password(length.get(),ups.get(),downs.get(),nums.get(),spec.get())
     var.set(text)
 
 def passwordScale(length):
+    '''
+    This is a call for a random password for the scale only
+    '''
     global text
     text = gen.password(length,ups.get(),downs.get(),nums.get(),spec.get())
     var.set(text)
 
 
-def screen():    
+def screen():   
+    '''
+    This is the screen that for the user
+    ''' 
     w = Scale(root, from_=1, to=99, orient='horizontal',variable=length, command=passwordScale)
     w.pack()
     c1 = tk.Checkbutton(root, text='Upper Case',onvalue=1, offvalue=0,variable=ups, command=password)

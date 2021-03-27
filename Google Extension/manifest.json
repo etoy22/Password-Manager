@@ -1,0 +1,19 @@
+{
+    "name":"Password_Manager_Chrome_Extension",
+    "version":"1.0",
+    "manifest_version":2,
+    "permissions": ["storage"],
+    "content_scripts":[
+        {
+            "js":["content.js"], 
+            "matches":[
+                "<all_urls>"
+            ]
+        }
+    ],
+    "browser_action":{
+        "default_popup":"Screen.html",
+        "default_title": "Password Manager"        
+    }
+    
+}
