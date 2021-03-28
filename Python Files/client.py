@@ -11,6 +11,9 @@ sys.path.append('./Pages')
 sys.path.append('./Pages/Helper_Functions')
 import GeneratorPage as genPage
 
+from application_states import ApplicationState
+
+
 HEADER = 64
 PORT = 3000
 FORMAT = 'utf-8'
@@ -23,19 +26,22 @@ client = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
 client.connect(ADDRESS)
 
 
-def send (msg):
+def send (code,first,second,third):
     '''
     Example of sending a file from the client to the server
     
     '''
     #What is being sent
     message = {
-        "CODE":'CODE',#Input a code that you want here
-        "INFO":msg #input info here
+        "CODE":code,
+        "FIR":first ,
+        "SEC":second,
+        "THR":third
     }
     # Send message
-    message = msg.encode(FORMAT)
-    msg_length = len(messsage)
+    result = json.dumps(message)
+    message = result.encode(FORMAT)
+    msg_length = len(message)
     send_length = str(msg_length).encode(FORMAT)
     send_length += b' ' * (HEADER-len(send_length))
     client.send(send_length)
@@ -48,69 +54,70 @@ def send (msg):
         msg = client.recv(msg_length)
         print(msg)
 
-def login(user,pas):
-    '''
-    This program is for logining into an account
-    '''
-    #What is being sent
-    message = {
-        "CODE":LOGIN,
-        'USER':user,
-        'PASS':pas
-    }
-    # Send message
-    result = json.dumps(message)
-    message = result.encode(FORMAT)
-    msg_length = len(message)
-    send_length = str(msg_length).encode(FORMAT)
-    send_length += b' ' * (HEADER-len(send_length))
-    client.send(send_length)
-    client.send(message)
-    
-    # Recieve message needs to be changed
-    msg_length = client.recv(HEADER).decode(FORMAT)
-    if msg_length:
-        msg_length = int(msg_length)
-        msg = client.recv(msg_length)
-        print(msg)#This needs to be changed currenty just outputs result to command line
-        
-
 def setup(user,pas1,pas2):
     '''
     This is for seting up a new user
     '''
     #What is being sent
-    message = {
-        "CODE":SETUP,
-        'USER':user,
-        'PASS1':pas,
-        'PASS2':pas2
-    }
-    # Send message
-    result = json.dumps(message)
-    message = result.encode(FORMAT)
-    msg_length = len(message)
-    send_length = str(msg_length).encode(FORMAT)
-    send_length += b' ' * (HEADER-len(send_length))
-    client.send(send_length)
-    client.send(message)
+    send(ApplicationStates.SIGN_UP.value,user,pas1,pas2)
+
+
+def login(user,pas):
+    '''
+    This program is for logining into an account
+    '''
+    ApplicationStates.LOGIN.value,
+    #What is being sent
+    send(ApplicationStates.LOGIN.value,user,pas,"")
+
+        
+def services():
+    '''
+    This is for getting services
+    '''
+    send(ApplicationStates.GET_SERVICES.value,"","","")
+
+def add_service(sname, user,pas):
+    '''
+    Add a new service to the account
+    '''
+    send(ApplicationStates.ADD_SERVICE.value,sname,user,pas)
+
+def check_service(sname,user,pas):
+    '''
+    '''
+    send(ApplicationStates.CHECK_SERVICES.value,sname,user,pas)
+
+def update_service(SNAME,user,pas):
+    '''
+    Update the service
+    '''
+    send(ApplicationStates.UPDATE_SERVICES.value,sname,user,pas)
+
+def deleteService(sname):
+    '''
+    Delete a service
+    '''
+    send(ApplicationStates.GET_SERVICES.value,sname,"","")
+
+def delete_account():
+    '''
+    Delete account
+    '''
+    send(ApplicationStates.GET_SERVICES.value,"","","")
+
+def disconnect():
+    '''
+    disconnect from the server
+    '''
+    send(ApplicationStates.DISCONNECT.value,"","","")
+
 
 def done():
     '''
     This function indicates that you are done using the program
     '''
-    #What is being sent
-    message = {
-        'CODE':DISCONECT_MESSAGE
-    }
-    # Send message
-    result = json.dumps(message)
-    message = result.encode(FORMAT)
-    msg_length = len(message)
-    send_length = str(msg_length).encode(FORMAT)
-    send_length += b' ' * (HEADER-len(send_length))
-    client.send(send_length)
-    client.send(message)
+    send(ApplicationStates.DISCONNECT.value,"","","")
 
 if __name__ == "__main__":
     genPage.screen()
