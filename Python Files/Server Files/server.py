@@ -4,9 +4,6 @@ a link to the tutorial will be bellow
 https://www.techwithtim.net/tutorials/socket-programming/
 '''
 
-import sys
-# sys.path.append('./Helper_Functions')
-sys.path.append('./Path')
 import socket
 import threading
 import sqlite3
