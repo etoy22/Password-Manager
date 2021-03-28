@@ -36,6 +36,14 @@ account_tracker = {SERVER:'HOST'}
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 server.bind(ADDRESS)
 
+def send_client(message):
+    msgOut = message.encode(FORMAT)
+    msgOut_length = len(msgOut)
+    send_length = str(msgOut_length).encode(FORMAT)
+    send_length += b' ' * (HEADER-len(send_length))
+    return msgOut,send_length
+
+
 def handle_client(con,adr):
     '''
     This is where a client gets put while connected to the server
@@ -59,10 +67,7 @@ def handle_client(con,adr):
                 for name in users_list:
                     if username == name[0]:
                         #  user already exist
-                        msgOut = "already exist".encode(FORMAT)
-                        msgOut_length = len(msgOut)
-                        send_length = str(msgOut_length).encode(FORMAT)
-                        send_length += b' ' * (HEADER-len(send_length))
+                        msgOut, send_length = send_client("already exist")
                         con.send(send_length)
                         con.send(msgOut)
                     else:
