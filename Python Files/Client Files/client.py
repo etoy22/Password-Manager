@@ -132,6 +132,8 @@ def done():
 
 
 if __name__ == "__main__":
+    #Testing area 
+    
     # genPage.screen()
     # setup("John","ASDF","Test")
     # delete_account()
