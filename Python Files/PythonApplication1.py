@@ -16,9 +16,6 @@ def sign_Window():
     newWindow.title("sign in page")
     newWindow.geometry("400x400")
 
-    
-
-
 log_in = tk.Button(frame,text = "Log in", fg="white", bg="black", command = log_Window)
 log_in.pack(padx =10, pady=5, side= tk.BOTTOM)
 

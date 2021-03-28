@@ -30,8 +30,11 @@ client.connect(ADDRESS)
 
 def send (code,first,second,third):
     '''
-    Example of sending a file from the client to the server
-    
+    This function takes up to 3 different varriables to send. Ones that need less have a NULL value.
+    code - which service you want to access
+    first - stores the first value the user wants to send
+    second - stores the second value the user wants to send
+    third - stores the third value the user wants to send
     '''
     #What is being sent
     message = {
@@ -54,21 +57,29 @@ def send (code,first,second,third):
     if msg_length:
         msg_length = int(msg_length)
         msg = client.recv(msg_length)
+        #Change this out so that it send the result to the application
         print(msg)
+        return msg #This way it can go back to the location and distribute it to where it needs to go
 
+
+'''
+Below here is just the setup for different services to send to the server
+'''
 def setup(user,pas1,pas2):
     '''
     This is for seting up a new user
+    user - the username of the new account
+    pas1 - the password of the new account
+    pas2 - the edit password of the new account
     '''
-    #What is being sent
     send(ApplicationStates.SIGN_UP.value,user,pas1,pas2)
 
 def login(user,pas):
     '''
     This program is for logining into an account
+    user - the username of the account
+    pas - the password of the account
     '''
-    ApplicationStates.LOGIN.value,
-    #What is being sent
     send(ApplicationStates.LOGIN.value,user,pas,None)
 
 def services():
@@ -112,14 +123,17 @@ def disconnect():
     '''
     send(ApplicationStates.DISCONNECT.value,None,None,None)
 
-
 def done():
     '''
     This function indicates that you are done using the program
     '''
     send(ApplicationStates.DISCONNECT.value,None,None,None)
 
+
+
 if __name__ == "__main__":
+    #Testing area 
+    
     # genPage.screen()
     # setup("John","ASDF","Test")
     # delete_account()
