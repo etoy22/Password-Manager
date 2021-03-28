@@ -6,12 +6,14 @@ https://www.techwithtim.net/tutorials/socket-programming/
 
 import socket
 import sys
+import json
 
+sys.path.append('./')
 sys.path.append('./Pages')
 sys.path.append('./Pages/Helper_Functions')
 import GeneratorPage as genPage
 
-from application_states import ApplicationState
+from application_states import ApplicationStates
 
 
 HEADER = 64
@@ -61,21 +63,19 @@ def setup(user,pas1,pas2):
     #What is being sent
     send(ApplicationStates.SIGN_UP.value,user,pas1,pas2)
 
-
 def login(user,pas):
     '''
     This program is for logining into an account
     '''
     ApplicationStates.LOGIN.value,
     #What is being sent
-    send(ApplicationStates.LOGIN.value,user,pas,"")
+    send(ApplicationStates.LOGIN.value,user,pas,None)
 
-        
 def services():
     '''
     This is for getting services
     '''
-    send(ApplicationStates.GET_SERVICES.value,"","","")
+    send(ApplicationStates.GET_SERVICES.value,None,None,None)
 
 def add_service(sname, user,pas):
     '''
@@ -98,27 +98,29 @@ def deleteService(sname):
     '''
     Delete a service
     '''
-    send(ApplicationStates.GET_SERVICES.value,sname,"","")
+    send(ApplicationStates.GET_SERVICES.value,sname,None,None)
 
 def delete_account():
     '''
     Delete account
     '''
-    send(ApplicationStates.GET_SERVICES.value,"","","")
+    send(ApplicationStates.GET_SERVICES.value,None,None,None)
 
 def disconnect():
     '''
     disconnect from the server
     '''
-    send(ApplicationStates.DISCONNECT.value,"","","")
+    send(ApplicationStates.DISCONNECT.value,None,None,None)
 
 
 def done():
     '''
     This function indicates that you are done using the program
     '''
-    send(ApplicationStates.DISCONNECT.value,"","","")
+    send(ApplicationStates.DISCONNECT.value,None,None,None)
 
 if __name__ == "__main__":
-    genPage.screen()
-    send(DISCONECT_MESSAGE)
+    # genPage.screen()
+    # setup("John","ASDF","Test")
+    # delete_account()
+    done()

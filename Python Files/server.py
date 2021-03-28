@@ -7,6 +7,13 @@ https://www.techwithtim.net/tutorials/socket-programming/
 import socket
 import threading
 import sqlite3
+import sys
+import json
+
+sys.path.append('./')
+sys.path.append('./Pages')
+sys.path.append('./Pages/Helper_Functions')
+
 from os import path
 
 from database_functions import (add_service, add_user, check_data_from_service, create_database,
@@ -14,22 +21,20 @@ from database_functions import (add_service, add_user, check_data_from_service, 
                                 get_user_id, get_usernames_list, list_saved_services,
                                 update_service_password, update_service_username)
 
-from application_states import ApplicationState
+from application_states import ApplicationStates
 
 HEADER = 64
 PORT = 3000
 SERVER = socket.gethostbyname(socket.gethostname()) #Local Hosting
-#SERVER =  # For connecting over internet put public adress ip
+#SERVER =  # For connecting over internet put public adress ip one may have to deactivate there firewall for this to work
 ADDRESS = (SERVER,PORT)
 FORMAT = 'utf-8'
 
 #Currently Contains IP to give current user name
 account_tracker = {SERVER:'HOST'}
-del account_tracker[SERVER]
 
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 server.bind(ADDRESS)
-
 
 def handle_client(con,adr):
     '''
@@ -37,6 +42,7 @@ def handle_client(con,adr):
     con - connection to their computer
     adr - address of their computer
     '''
+    print(f"[NEW CONNECTION] {adr} connected.")
     connected = True
     while connected:
         #decode message recived
@@ -61,7 +67,9 @@ def handle_client(con,adr):
                         con.send(msgOut)
                     else:
                         try:
+                            #CHECK #6 - Maybe we should make sure the password is secure
                             add_user(username, password)
+                            account_tracker[adr]=username
                             msgOut = "success".encode(FORMAT)
                             msgOut_length = len(msgOut)
                             send_length = str(msgOut_length).encode(FORMAT)
@@ -74,8 +82,7 @@ def handle_client(con,adr):
                             send_length = str(msgOut_length).encode(FORMAT)
                             send_length += b' ' * (HEADER-len(send_length))
                             con.send(send_length)
-                            con.send(msgOut)
-                
+                            con.send(msgOut)      
             #Case if someone attempts to login
             elif msg['CODE'] == ApplicationStates.LOGIN.value:
                 #Change earlier than this so that it actually requires the username and passwords to be correct
@@ -117,8 +124,7 @@ def handle_client(con,adr):
                 send_length += b' ' * (HEADER-len(send_length))
                 con.send(send_length)
                 con.send(msgOut)
-
-            # in case add service
+            # add service to account
             elif msg['CODE'] == ApplicationStates.ADD_SERVICE.value:
                 service_name = msg['FIR']
                 service_username = msg['SEC']
@@ -139,8 +145,7 @@ def handle_client(con,adr):
                 send_length = str(msgOut_length).encode(FORMAT)
                 send_length += b' ' * (HEADER-len(send_length))
                 con.send(send_length)
-                con.send(msgOut)
-           
+                con.send(msgOut)     
             # check service
             elif msg['CODE'] == ApplicationStates.CHECK_SERVICE.value:
                 service_name = msg['FIR']
@@ -160,8 +165,8 @@ def handle_client(con,adr):
                 send_length += b' ' * (HEADER-len(send_length))
                 con.send(send_length)
                 con.send(msgOut)
-            
              # Update service
+            # Update Username and Password for a service
             elif msg['CODE'] == ApplicationStates.UPDATE_SERVICE.value:
                 service_name = msg['FIR']
                 new_service_username = msg['SEC']
@@ -180,6 +185,7 @@ def handle_client(con,adr):
                                 user_id, service_name, new_service_password)
                             update_service_username(
                                 user_id, service_name, new_service_username)
+                            #CHECK 5 - make sure this doesn't break the code
                             break
                 else:
                     service_exists = 0
@@ -189,7 +195,6 @@ def handle_client(con,adr):
                 send_length += b' ' * (HEADER-len(send_length))
                 con.send(send_length)
                 con.send(msgOut)
-
             # Delete service
             elif msg['CODE'] == ApplicationStates.DELETE_SERVICE.value:
                 service_name = msg['FIR']
@@ -210,18 +215,21 @@ def handle_client(con,adr):
                 con.send(msgOut) 
             # Delete account
             elif msg['CODE'] == ApplicationStates.DELETE_ACCOUNT.value:
-                #CHECK 4 - maybe require a username password verification
+                #CHECK 4 - maybe require a username password verification from server
                 user_id = account_tracker[adr[1]]
                 delete_user(user_id)
+            #Disconnect from server
             elif msg['CODE'] == ApplicationStates.DISCONNECT.value:
-                del account_tracker[adr[1]]
-                print(account_tracker)
+                if (adr[1]) in account_tracker :
+                    del account_tracker[adr[1]]
+                    print(account_tracker)
+                print(f"[{adr}] Has left the application")
                 connected = False
     con.close()
 
 if __name__ == "__main__":
     server.listen()
-    print(f"{SERVER}")
+    print(f"Connect to {SERVER}")
     while True:
         con, adr = server.accept()
         thread = threading.Thread(target=handle_client, args=(con,adr))
