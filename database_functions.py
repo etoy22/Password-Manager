@@ -1,5 +1,5 @@
 import sqlite3
-
+#using sqlite3
 #Database functions for manipulating our tables for users and services(groupings)
 
 def connect():
