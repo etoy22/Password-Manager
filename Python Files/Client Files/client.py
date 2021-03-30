@@ -11,7 +11,6 @@ import json
 sys.path.append('./')
 sys.path.append('./Pages')
 sys.path.append('./Pages/Helper_Functions')
-import GeneratorPage as genPage
 
 from application_states import ApplicationStates
 
@@ -58,21 +57,20 @@ def send (code,first,second,third):
         msg_length = int(msg_length)
         msg = client.recv(msg_length)
         #Change this out so that it send the result to the application
-        print(msg)
         return msg #This way it can go back to the location and distribute it to where it needs to go
 
 
 '''
 Below here is just the setup for different services to send to the server
 '''
-def setup(user,pas1,pas2):
+def setup(user,pas):
     '''
     This is for seting up a new user
     user - the username of the new account
     pas1 - the password of the new account
     pas2 - the edit password of the new account
     '''
-    send(ApplicationStates.SIGN_UP.value,user,pas1,pas2)
+    return send(ApplicationStates.SIGN_UP.value,user,pas,None)
 
 def login(user,pas):
     '''
@@ -80,61 +78,63 @@ def login(user,pas):
     user - the username of the account
     pas - the password of the account
     '''
-    send(ApplicationStates.LOGIN.value,user,pas,None)
+    return send(ApplicationStates.LOGIN.value,user,pas,None)
 
-def services():
+def get_services():
     '''
     This is for getting services
     '''
-    send(ApplicationStates.GET_SERVICES.value,None,None,None)
+    return send(ApplicationStates.GET_SERVICES.value,None,None,None)
 
 def add_service(sname, user,pas):
     '''
     Add a new service to the account
     '''
-    send(ApplicationStates.ADD_SERVICE.value,sname,user,pas)
+    return send(ApplicationStates.ADD_SERVICE.value,sname,user,pas)
 
-def check_service(sname,user,pas):
+def check_service(sname):
+    #Maybe shouldnt require us`ername and password?
     '''
+    
     '''
-    send(ApplicationStates.CHECK_SERVICES.value,sname,user,pas)
+    return send(ApplicationStates.CHECK_SERVICE.value,sname,None,None)
 
-def update_service(SNAME,user,pas):
+def update_service(sname,user,pas):
     '''
     Update the service
     '''
-    send(ApplicationStates.UPDATE_SERVICES.value,sname,user,pas)
+    return send(ApplicationStates.UPDATE_SERVICE.value,sname,user,pas)
 
 def deleteService(sname):
     '''
     Delete a service
     '''
-    send(ApplicationStates.GET_SERVICES.value,sname,None,None)
+    return send(ApplicationStates.DELETE_SERVICE.value,sname,None,None)
 
 def delete_account():
     '''
     Delete account
     '''
-    send(ApplicationStates.GET_SERVICES.value,None,None,None)
-
-def disconnect():
-    '''
-    disconnect from the server
-    '''
-    send(ApplicationStates.DISCONNECT.value,None,None,None)
+    return send(ApplicationStates.DELETE_ACCOUNT.value,None,None,None)
 
 def done():
     '''
     This function indicates that you are done using the program
     '''
-    send(ApplicationStates.DISCONNECT.value,None,None,None)
+    return send(ApplicationStates.DISCONNECT.value,None,None,None)
 
 
 
 if __name__ == "__main__":
     #Testing area 
     
-    # genPage.screen()
-    # setup("John","ASDF","Test")
-    # delete_account()
-    done()
+    # print(setup("John","ASDF"))
+    # print(login("John","ASDF"))
+    # print(get_services())
+    # print(add_service("Dog","LOL",'DOLL'))
+    # print(update_service("Google","DO","ROW"))
+    # print(check_service("Google"))
+    # print(deleteService("Google"))
+    # print(get_services())
+    # print(delete_account())
+    print(done())
