@@ -67,18 +67,21 @@ def handle_client(con,adr):
                 username = msg['FIR']
                 password = msg['SEC']
                 users_list = get_usernames_list()
+                flip = True
                 for name in users_list: 
-                    if username == name[0]: #CHECK #11 - What is name[0]? is this an error
+                    if username == name[0]: 
                         # user already exist
-                        send_client("already exist")
-                else: #CHECK #12 - Does this work?
+                        flip = False
+                        break
+                if flip: 
                     try:
-                        #CHECK #6 - Maybe we should make sure the password is secure
+                        #password may be failing
                         add_user(username, password)
-                        account_tracker[adr]=username #Ethan added this for later parts
-                        send_client("success")
+                        send_client("Success")
                     except sqlite3.Error:
-                        send_client("error")
+                        send_client("Error")
+                else:
+                    send_client("Already exist")
             #Case if someone attempts to login
             elif msg['CODE'] == ApplicationStates.LOGIN.value:
                 #Change earlier than this so that it actually requires the username and passwords to be correct
@@ -86,132 +89,130 @@ def handle_client(con,adr):
                 password = msg['SEC']
                 #  Checking if user exists
                 users_list = get_usernames_list()
+                #CHECK #34 - Make sure this number has a result
+                accessed = str(0) #The username or password has an issue
                 for user in users_list:
                     if username == user[0]:
                         if password == get_master_pwd(username):
-                            #CHECK #13 - How are we getting the username? Maybe we could do account_tracker[adr]
                             user_id = get_user_id(username)
-                            #CHECK #8 - What is adr[1]? adr refers to the computers adress
-                            account_tracker[adr[1]] = user_id
-                            #CHECK #7 - Make sure to make this number have a result when it sends back to the client
+                            account_tracker[adr] = user_id
+                            #CHECK #36 - What is this suppose to send 
                             accessed = str(1)+"#"+str(user_id)
                             break
-                        else:
-                            #CHECK #14 - Make sure to make this number have a result when it sends back to the client
-                            accessed = str(0)
-                            break
-                    else:
-                        #CHECK #15 - Make sure to make this number have a result when it sends back to the client
-                        accessed = str(2)
-                    send_client(accessed)
+                send_client(accessed)
             # send service list
             elif msg['CODE'] == ApplicationStates.GET_SERVICES.value:
-                #CHECK #9 - Again what is adr[1]? Maybe replace with adr
-                user_id = account_tracker[adr[1]]
-                services_list = list_saved_services(user_id)
-                senddata = ""
-                #CHECK #1 - Might need to change how I data is sent back to the client
-                for service in services_list:
-                    senddata += service[0]+"#"
-                senddata = senddata[:-1]
-                send_client(senddata)
+                if adr in account_tracker:
+                    user_id = account_tracker[adr]
+                    services_list = list_saved_services(user_id)
+                    senddata = ""
+                    #CHECK #1 - Might need to change how I data is sent back to the client
+                    for service in services_list:
+                        senddata += service[0]+"#"
+                    senddata = senddata[:-1]
+                    send_client(senddata)
+                else:
+                    send_client("Error no account")
             # add service to account
             elif msg['CODE'] == ApplicationStates.ADD_SERVICE.value:
-                service_name = msg['FIR']
-                service_username = msg['SEC']
-                service_password = msg['THR']
-                #CHECK #16 - Adr[1] again? Same as earlier
-                services_list = list_saved_services(account_tracker[adr[1]])
-                for service in services_list:
-                    if service_name == service[0]:
-                        accessed = str(0)
-                        return
+                if adr in account_tracker:
+                    service_name = msg['FIR']
+                    service_username = msg['SEC']
+                    service_password = msg['THR']
+                    services_list = list_saved_services(account_tracker[adr])
+                    flip = True
+                    for service in services_list:
+                        if service_name == service[0]:
+                            #CHECK #38 - Multiple accounts for one service
+                            accessed = str(0)
+                            flip = False
+                            #CHECK #35 - make sure this doesn't break things
+                            break
+                    if flip:
+                        user_id = account_tracker[adr]
+                        add_service(service_name, service_username,
+                                    service_password, user_id)
+                        #CHECK #18 - Make sure this number has a response in client
+                        accessed = str(1)
+                    #CHECK #2 - What is being sent here
+                    send_client(accessed)  
                 else:
-                    #CHECK #17 - Adr[1] again? Same as earlier checks
-                    user_id = account_tracker[adr[1]]
-                    add_service(service_name, service_username,
-                                service_password, user_id)
-                    #CHECK #18 - Make sure this number has a response in client
-                    accessed = str(1)
-                #CHECK #2 - What is being sent here
-                send_client(accessed)  
+                    send_client('Error no account')
             # check service
             elif msg['CODE'] == ApplicationStates.CHECK_SERVICE.value:
-                service_name = msg['FIR']
-                #CHECK #19 - Adr[1] again? Same as earlier
-                user_id = account_tracker[adr[1]]
-                services_list = list_saved_services(user_id)
-                for service in services_list:
-                    if service_name == service[0]:
-                        #CHECK #10 another case where we might need to change how data is sent
-                        service_username, service_password = check_data_from_service(user_id, service_name)
-                        #CHECK #20 - Change how this is sent back
-                        accessed = str(1)+"#"+service_username+"#"+service_password
-                        #CHECK #3 - Double check that this doesn't break out of loop 
-                        break
-                else:
-                    #CHECK #21 - Make sure value has a response in client
+                if adr in account_tracker:
+                    service_name = msg['FIR']
+                    user_id = account_tracker[adr]
+                    services_list = list_saved_services(user_id)
                     accessed = str(0)
-                send_client(accessed)  
+                    for service in services_list:
+                        if service_name == service:
+                            service_username, service_password = check_data_from_service(user_id, service_name)
+                            #CHECK #20 - Change how this is sent back
+                            accessed = str(1)+"#"+service_username+"#"+service_password
+                            break
+                    send_client(accessed)  
+                else:
+                    send_client("Error no account")
             # Update Username and Password for a service
             elif msg['CODE'] == ApplicationStates.UPDATE_SERVICE.value:
-                service_name = msg['FIR']
-                new_service_username = msg['SEC']
-                new_service_password = msg['THR']
-                #CHECK #22 - Adr[1] again? Same as earlier
-                user_id = account_tracker[adr[1]]
-                services_list = list_saved_services(user_id)
-                for name in services_list:
-                    #CHECK #23 - What is name[0]? its not a length array
-                    if name[0] == service_name:
-                        service_exists = 1
-                        if new_service_username == '':
-                            update_service_password(user_id, service_name, new_service_password)
-                        elif new_service_password == '':
-                            update_service_username(user_id, service_name, new_service_username)
-                        #CHECK #24 - I think this goes first as it has the most conditions
-                        elif username != '' and password != '':
-                            update_service_password(
-                                user_id, service_name, new_service_password)
-                            update_service_username(
-                                user_id, service_name, new_service_username)
-                            #CHECK #5 - make sure this doesn't break the code
-                            break
+                if adr in account_tracker:
+                    service_name = msg['FIR']
+                    new_service_username = msg['SEC']
+                    new_service_password = msg['THR']
+                    user_id = account_tracker[adr]
+                    services_list = list_saved_services(user_id)
+                    for name in services_list:
+                        if name == service_name:
+                            service_exists = 1
+                            if new_service_username != None and new_service_password != None:
+                                update_service_password(
+                                    user_id, service_name, new_service_password)
+                                update_service_username(
+                                    user_id, service_name, new_service_username)
+                                break
+                            elif new_service_username == None:
+                                update_service_password(user_id, service_name, new_service_password)
+                                break
+                            elif new_service_password == None:
+                                update_service_username(user_id, service_name, new_service_username)
+                                break
+                    else:
+                        #CHECK #25 - Make sure this has a value in client
+                        service_exists = 0
+                    send_client(str(service_exists))   
                 else:
-                    #CHECK #25 - Make sure this has a value in client
-                    service_exists = 0
-                send_client(str(service_exists))   
+                    send_client("Error no account")
             # Delete service
             elif msg['CODE'] == ApplicationStates.DELETE_SERVICE.value:
-                service_name = msg['FIR']
-                #CHECK #26 - Adr[1] again? Same as earlier
-                user_id = account_tracker[adr[1]]
-                services_list = list_saved_services(user_id)
-                for name in services_list:
-                    #CHECK #27 - Adr[1] name[0] again? Look at previous checks
-                    if name[0] == service_name:
-                        #CHECK #28 - Make sure this has value in client
-                        service_exists = 1
-                        delete_service(user_id, service_name)
-                        break
-                #CHECK #30 - does this even work
-                else:
+                if adr in account_tracker:
+                    service_name = msg['FIR']
+                    user_id = account_tracker[adr]
+                    services_list = list_saved_services(user_id)
                     #CHECK #29 - Make sure this value has action in client
                     service_exists = 0
-                send_client(str(service_exists))
+                    for name in services_list:
+                        if name[0] == service_name:
+                            #CHECK #28 - Make sure this has value in client
+                            service_exists = 1
+                            delete_service(user_id, service_name)
+                            break
+                    send_client(str(service_exists))
+                else:
+                    send_client("Error no account")
             # Delete account
             elif msg['CODE'] == ApplicationStates.DELETE_ACCOUNT.value:
                 #CHECK #4 - maybe require a username password verification
-                #CHECK #31 - Adr[1] again? Same as earlier
-                user_id = account_tracker[adr[1]]
-                delete_user(user_id)
+                if adr in account_tracker:
+                    user_id = account_tracker[adr]
+                    delete_user(user_id)
+                    send_client('Deleted')
+                else:
+                    send_client("Error no account")
             #Disconnect from server
             elif msg['CODE'] == ApplicationStates.DISCONNECT.value:
-                #CHECK #32 - Adr[1] again? Same as earlier
-                if (adr[1]) in account_tracker:
-                    del account_tracker[adr[1]]
-                    #CHECK #33 - Delete later
-                    print(account_tracker)
+                if adr in account_tracker:
+                    del account_tracker[adr]
                 print(f"[{adr}] Has left the application")
                 connected = False
                 send_client("Disconected")  
