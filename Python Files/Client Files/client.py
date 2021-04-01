@@ -52,12 +52,13 @@ def send (code,first,second,third):
     client.send(message)
     
     #Recieve Message
+  
     msg_length = client.recv(HEADER).decode(FORMAT)
     if msg_length:
+        #Recive a message from client
         msg_length = int(msg_length)
-        msg = client.recv(msg_length)
-        #Change this out so that it send the result to the application
-        return msg #This way it can go back to the location and distribute it to where it needs to go
+        msg = json.loads(client.recv(msg_length).decode(FORMAT)) 
+        return msg
 
 
 '''
@@ -70,7 +71,9 @@ def setup(user,pas):
     pas1 - the password of the new account
     pas2 - the edit password of the new account
     '''
-    return send(ApplicationStates.SIGN_UP.value,user,pas,None)
+    result = send(ApplicationStates.SIGN_UP.value,user,pas,None)
+    if result['Tag'] == 0:
+        return result['Report']
 
 def login(user,pas):
     '''
@@ -78,50 +81,68 @@ def login(user,pas):
     user - the username of the account
     pas - the password of the account
     '''
-    return send(ApplicationStates.LOGIN.value,user,pas,None)
+    result =  send(ApplicationStates.LOGIN.value,user,pas,None)
+    if (result["Tag"] == 0)
+       return result['Report']
 
 def get_services():
     '''
     This is for getting services
     '''
-    return send(ApplicationStates.GET_SERVICES.value,None,None,None)
+    result = send(ApplicationStates.GET_SERVICES.value,None,None,None)
+    if (result["Tag"] == 0)
+       return result['Report']
 
 def add_service(sname, user,pas):
     '''
     Add a new service to the account
     '''
-    return send(ApplicationStates.ADD_SERVICE.value,sname,user,pas)
+    result = send(ApplicationStates.ADD_SERVICE.value,sname,user,pas)
+    if (result["Tag"] == 0)
+       return result['Report']
 
 def check_service(sname):
     #Maybe shouldnt require us`ername and password?
     '''
     
     '''
-    return send(ApplicationStates.CHECK_SERVICE.value,sname,None,None)
+    result = send(ApplicationStates.CHECK_SERVICE.value,sname,None,None)
+    if (result["Tag"] == 0)
+       return result['Report']
 
 def update_service(sname,user,pas):
     '''
     Update the service
     '''
-    return send(ApplicationStates.UPDATE_SERVICE.value,sname,user,pas)
+    result = send(ApplicationStates.UPDATE_SERVICE.value,sname,user,pas)
+    if (result["Tag"] == 0)
+       return result['Report']
 
 def deleteService(sname):
     '''
     Delete a service
     '''
-    return send(ApplicationStates.DELETE_SERVICE.value,sname,None,None)
+    result = send(ApplicationStates.DELETE_SERVICE.value,sname,None,None)
+    if (result["Tag"] == 0)
+       return result['Report']
 
 def delete_account():
     '''
     Delete account
     '''
-    return send(ApplicationStates.DELETE_ACCOUNT.value,None,None,None)
+    result = send(ApplicationStates.DELETE_ACCOUNT.value,None,None,None)
+    if (result["Tag"] == 0)
+       return result['Report']
 
 def done():
     '''
     This function indicates that you are done using the program
     '''
-    return send(ApplicationStates.DISCONNECT.value,None,None,None)
+    
+    result = send(ApplicationStates.DISCONNECT.value,None,None,None)
+    if (result["Tag"] == 0)
+       return result['Report']
+    
 
 
 
@@ -137,4 +158,6 @@ if __name__ == "__main__":
     # print(deleteService("Google"))
     # print(get_services())
     # print(delete_account())
+    print('In')
     print(done())
+    print('OUT')

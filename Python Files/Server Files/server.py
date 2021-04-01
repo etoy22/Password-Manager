@@ -8,7 +8,7 @@ import socket
 import threading
 import sqlite3
 import json
-
+import encrypt
 
 from os import path
 
@@ -35,17 +35,36 @@ account_tracker = dict()
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 server.bind(ADDRESS)
 
+
 def send_client(message):
     '''
     This is used to send a message from the server back to the client
     message - the message you want to send back to the client
     '''
-    msgOut = message.encode(FORMAT)
-    msgOut_length = len(msgOut)
-    send_length = str(msgOut_length).encode(FORMAT)
+    result = json.dumps(message)
+    message = result.encode(FORMAT)
+    msg_length = len(message)
+    send_length = str(msg_length).encode(FORMAT)
     send_length += b' ' * (HEADER-len(send_length))
     con.send(send_length)
-    con.send(msgOut)
+    con.send(message)
+
+def serverEncrypt(service_username,service_password,adr):
+    '''
+    
+    '''
+    accountUsername = get_username(account_tracker[adr])
+    accountPassword = get_master_pwd(accountUsername)
+    return ciphertext, tag = encrypt.encrypt_then_mac(service_password,masterPassword,service_username,accountUsername)
+
+def serverDecrypt(user_id,service_name,adr):
+    '''
+    check_data_from_service needs to give tag as well
+    '''
+    service_username, ciphertext = check_data_from_service(user_id, service_name)
+    tag =""
+    service_password = encrypt.verify_then_decrypt(ciphertext,tag,service_username,account_tracker[adr])
+    return service_password
 
 def handle_client(con,adr):
     '''
@@ -77,11 +96,23 @@ def handle_client(con,adr):
                     try:
                         #password may be failing
                         add_user(username, password)
-                        send_client("Success")
+                        accessed = {
+                            "Tag":1
+                        }
+                        send_client(accessed)
                     except sqlite3.Error:
-                        send_client("Error")
+                        accessed = {
+                            "Tag":0,
+                            "Report":"ERROR"
+                        }
+                        send_client(accessed)
                 else:
-                    send_client("Already exist")
+                    accessed = {
+                        "Tag":0,
+                        "Report":"Already exist"
+                    }
+                    send_client(accessed)
+                
             #Case if someone attempts to login
             elif msg['CODE'] == ApplicationStates.LOGIN.value:
                 #Change earlier than this so that it actually requires the username and passwords to be correct
@@ -90,14 +121,20 @@ def handle_client(con,adr):
                 #  Checking if user exists
                 users_list = get_usernames_list()
                 #CHECK #34 - Make sure this number has a result
-                accessed = str(0) #The username or password has an issue
+                accessed = {
+                    "Tag":0,
+                    "Report":"Issue with username or password"
+                } #The username or password has an issue
                 for user in users_list:
                     if username == user[0]:
                         if password == get_master_pwd(username):
                             user_id = get_user_id(username)
                             account_tracker[adr] = user_id
                             #CHECK #36 - What is this suppose to send 
-                            accessed = str(1)+"#"+str(user_id)
+                            accessed = {
+                                "Tag":1,
+                                "User_id":user_id
+                            }
                             break
                 send_client(accessed)
             # send service list
@@ -105,14 +142,31 @@ def handle_client(con,adr):
                 if adr in account_tracker:
                     user_id = account_tracker[adr]
                     services_list = list_saved_services(user_id)
-                    senddata = ""
                     #CHECK #1 - Might need to change how I data is sent back to the client
+                    accessed = {
+                        "Tag":1
+                    }
+                    i = 0
                     for service in services_list:
-                        senddata += service[0]+"#"
-                    senddata = senddata[:-1]
-                    send_client(senddata)
+                        accessed[("sendData"+i)] = service[0]
+                        
+                    '''
+                    Did i mess this up
+                    '''
+                    # senddata = senddata[:-1]
+                    
+                    # senddata = ""
+                    # #CHECK #1 - Might need to change how I data is sent back to the client
+                    # for service in services_list:
+                    #     senddata += service[0]+"#"
+                    # senddata = senddata[:-1]
+                    send_client(accessed)
                 else:
-                    send_client("Error no account")
+                    accessed = {
+                        "Tag":0,
+                        "Report":"Error no account"
+                    }
+                    send_client(accessed)
             # add service to account
             elif msg['CODE'] == ApplicationStates.ADD_SERVICE.value:
                 if adr in account_tracker:
@@ -123,37 +177,57 @@ def handle_client(con,adr):
                     flip = True
                     for service in services_list:
                         if service_name == service[0]:
-                            #CHECK #38 - Multiple accounts for one service
-                            accessed = str(0)
+                            #CHECK #38 - update for service_id
+                            accessed = {
+                                "Tag":0,
+                                "Report":"Same Service"
+                            }
                             flip = False
-                            #CHECK #35 - make sure this doesn't break things
                             break
                     if flip:
                         user_id = account_tracker[adr]
+                        ciphertext, tag = serverEncrypt(service_username,service_password,service_id,adr)
+                        #ASDF
+                        '''
+                        Add tag to add_service
+                        '''
                         add_service(service_name, service_username,
-                                    service_password, user_id)
+                                    ciphertext, user_id)
                         #CHECK #18 - Make sure this number has a response in client
-                        accessed = str(1)
-                    #CHECK #2 - What is being sent here
+                        accessed = {
+                            "Tag":1
+                        }                    
+                        #CHECK #2 - What is being sent here
                     send_client(accessed)  
                 else:
-                    send_client('Error no account')
+                    accessed = {
+                        "Tag":0,
+                        "Report":"Error no account"
+                    }
+                    send_client(accessed)
             # check service
             elif msg['CODE'] == ApplicationStates.CHECK_SERVICE.value:
+                accessed =  {
+                    "Tag": 0,
+                    "Report":"Error"
+                }
                 if adr in account_tracker:
                     service_name = msg['FIR']
                     user_id = account_tracker[adr]
                     services_list = list_saved_services(user_id)
-                    accessed = str(0)
+                    
                     for service in services_list:
                         if service_name == service:
-                            service_username, service_password = check_data_from_service(user_id, service_name)
-                            #CHECK #20 - Change how this is sent back
-                            accessed = str(1)+"#"+service_username+"#"+service_password
+                            service_password = serverDecrypt(user_id,service_name,adr)
+                            accessed = {
+                                "Tag":1,
+                                "Username": service_username,
+                                "Password": service_password
+                            }
                             break
                     send_client(accessed)  
                 else:
-                    send_client("Error no account")
+                    send_client(accessed)
             # Update Username and Password for a service
             elif msg['CODE'] == ApplicationStates.UPDATE_SERVICE.value:
                 if adr in account_tracker:
@@ -162,27 +236,46 @@ def handle_client(con,adr):
                     new_service_password = msg['THR']
                     user_id = account_tracker[adr]
                     services_list = list_saved_services(user_id)
+                    flip = True
                     for name in services_list:
                         if name == service_name:
-                            service_exists = 1
+                            flip = False
                             if new_service_username != None and new_service_password != None:
+                                new_service_password, tag = serverEncrypt(new_service_name,service_password,adr)
+                                '''
+                                Add tag to update_service_password
+                                '''
                                 update_service_password(
                                     user_id, service_name, new_service_password)
                                 update_service_username(
                                     user_id, service_name, new_service_username)
                                 break
                             elif new_service_username == None:
+                                '''
+                                Add tag
+                                '''
+                                new_service_password,tag = serverEncrypt(service_name,service_password,adr)
                                 update_service_password(user_id, service_name, new_service_password)
                                 break
                             elif new_service_password == None:
                                 update_service_username(user_id, service_name, new_service_username)
                                 break
-                    else:
+                            accessed = {
+                                "Tag":1
+                            }
+                    if flip:
                         #CHECK #25 - Make sure this has a value in client
-                        service_exists = 0
-                    send_client(str(service_exists))   
+                        accessed = {
+                            "Tag":0,
+                            "Report":"Service does not exist"
+                        }                    
+                    send_client(accessed)   
                 else:
-                    send_client("Error no account")
+                    accessed = {
+                        "Tag":0,
+                        "Report":"Error no account"
+                    }
+                    send_client(accessed)
             # Delete service
             elif msg['CODE'] == ApplicationStates.DELETE_SERVICE.value:
                 if adr in account_tracker:
@@ -190,32 +283,52 @@ def handle_client(con,adr):
                     user_id = account_tracker[adr]
                     services_list = list_saved_services(user_id)
                     #CHECK #29 - Make sure this value has action in client
-                    service_exists = 0
+                    accessed = {
+                        "Tag":0,
+                        "Report":"Does not exist"
+                    }
                     for name in services_list:
                         if name[0] == service_name:
                             #CHECK #28 - Make sure this has value in client
-                            service_exists = 1
+                            accessed = {
+                                "Tag":1,
+                                "Report":"Does not exist"
+                            }
                             delete_service(user_id, service_name)
                             break
-                    send_client(str(service_exists))
+                    
+                    send_client(accessed)
                 else:
-                    send_client("Error no account")
+                    accessed = {
+                        "Tag":0,
+                        "Report":"Error no account"
+                    }
+                    send_client(accessed)
             # Delete account
             elif msg['CODE'] == ApplicationStates.DELETE_ACCOUNT.value:
                 #CHECK #4 - maybe require a username password verification
                 if adr in account_tracker:
                     user_id = account_tracker[adr]
                     delete_user(user_id)
-                    send_client('Deleted')
+                    accessed = {
+                        "Tag":1
+                    }
                 else:
-                    send_client("Error no account")
+                    accessed = {
+                        "Tag":0,
+                        "Report":"Does not exist"
+                    }
+                send_client(accessed)
             #Disconnect from server
             elif msg['CODE'] == ApplicationStates.DISCONNECT.value:
                 if adr in account_tracker:
                     del account_tracker[adr]
                 print(f"[{adr}] Has left the application")
                 connected = False
-                send_client("Disconected")  
+                accessed = {
+                    "Tag":"1"
+                }
+                send_client(accessed)
     con.close()
 
 if __name__ == "__main__":
