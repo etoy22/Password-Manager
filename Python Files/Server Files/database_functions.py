@@ -29,6 +29,7 @@ def create_database():
 
     cursor.execute('''
         CREATE TABLE "services" (
+        "service_id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
         "service_name" TEXT NOT NULL,
         "username" TEXT NOT NULL,
         "password" BLOB NOT NULL,
