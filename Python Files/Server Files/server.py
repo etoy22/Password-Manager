@@ -345,6 +345,7 @@ def handle_client(con,adr):
 if __name__ == "__main__":
     if not path.exists('passwords.db'):
         create_database()
+        print('Dayabase Created')
     server.listen()
     print(f"Connect to {SERVER}")
     while True:

@@ -203,16 +203,14 @@ def done():
     result = send(ApplicationStates.DISCONNECT.value,None,None,None)
     return result
 
-
-
 if __name__ == "__main__":
     #Testing area 
     
-    print(setup("John","ASDF"))
-    print(login("John","ASDF"))
+    # print(setup("John","ASDF"))
+    # print(login("John","ASDF"))
     # print(get_services())
-    print(add_service("Dog","LOL",'DOLL'))
-    print(add_service("STOP","LOL",'DOLL'))
+    # print(add_service("Dog","LOL",'DOLL'))
+    # print(add_service("STOP","LOL",'DOLL'))
     # print(update_service("Google","DO","ROW"))
     # print(check_service("Google"))
     # print(deleteService("Google"))
