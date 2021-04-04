@@ -27,20 +27,22 @@ client = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
 client.connect(ADDRESS)
 
 
-def send (code,first,second,third):
+def send (code,first=None,second=None,third=None, four=None):
     '''
     This function takes up to 3 different varriables to send. Ones that need less have a NULL value.
     code - which service you want to access
     first - stores the first value the user wants to send
     second - stores the second value the user wants to send
     third - stores the third value the user wants to send
+    four - stores the fourth value the user wants to send
     '''
     #What is being sent
     message = {
         "CODE":code,
         "FIR":first ,
         "SEC":second,
-        "THR":third
+        "THR":third,
+        "FOR":four
     }
     # Send message
     result = json.dumps(message)
@@ -77,7 +79,7 @@ def setup(user,pas):
     1 - The operation was successful
     2 - This means that the username already exists
     '''
-    result = send(ApplicationStates.SIGN_UP.value,user,pas,None)
+    result = send(ApplicationStates.SIGN_UP.value,user,pas)
     return result['Tag']
 
 def login(user,pas):
@@ -90,7 +92,7 @@ def login(user,pas):
     0 - This means there is an error
     1 - The login was successful
     '''
-    result =  send(ApplicationStates.LOGIN.value,user,pas,None)
+    result =  send(ApplicationStates.LOGIN.value,user,pas)
     return result["Tag"]
 
 def get_services():
@@ -106,9 +108,11 @@ def get_services():
     Array[i][1] - name of the service
     Array[i][2] - Username for that service
     '''
-    result = send(ApplicationStates.GET_SERVICES.value,None,None,None)
-    # if (result["Tag"] == 0):
-    #    return result
+    result = send(ApplicationStates.GET_SERVICES.value)
+    if (result["Tag"] == 0):
+       return 0
+    return result['senddata']
+
 
 def add_service(sname, user,pas):
     '''
@@ -125,8 +129,7 @@ def add_service(sname, user,pas):
     '''
     result = send(ApplicationStates.ADD_SERVICE.value,sname,user,pas)
     return result['Tag']
-    # if (result["Tag"] == 0)
-    #    return result['Report']
+
 
 def check_service(sID):
     '''
@@ -137,23 +140,26 @@ def check_service(sID):
     
     returns:
     0 - The account is not logged in
-    2 - Logged in but error
+    2 - Logged in but an error
     info = {
+        "ServiceID:service_id,
+         "ServiceName": service_name,
         "Username": service_username,
-        "Password": service_password.
-        "ServiceName": service_name,
-        "ServiceID:service_id
+        "Password": service_password
     } - this means that you successfully got recieved the account
     '''
-    result = send(ApplicationStates.CHECK_SERVICE.value,sname,None,None)
+    result = send(ApplicationStates.CHECK_SERVICE.value,sID)
+    if (isinstance(result['Tag'],int)):
+        return result['Tag'] 
     return result
 
-def update_service(sID,user,pas):
+def update_service(sID,service_name,user,pas):
     '''
     Update the service
     
     Requirements
     sID - service ID
+    service_name: change service name
     user - updated username gets None if there are no changes to be done
     pas - updated passwordgets None if there are no changes to be done
     
@@ -161,7 +167,9 @@ def update_service(sID,user,pas):
     0 - Error
     1 - Success
     '''
-    result = send(ApplicationStates.UPDATE_SERVICE.value,sname,user,pas)
+    result = send(ApplicationStates.UPDATE_SERVICE.value,sID,service_name, user,pas)
+    if result['Tag'] == 0:
+        return result['Tag']
     return result
 
 def deleteService(sname):
@@ -175,8 +183,8 @@ def deleteService(sname):
     0 - Error
     1 - Success
     '''
-    result = send(ApplicationStates.DELETE_SERVICE.value,sname,None,None)
-    return result
+    result = send(ApplicationStates.DELETE_SERVICE.value,sname)
+    return result['Tag']
 
 def delete_account():
     '''
@@ -189,31 +197,42 @@ def delete_account():
     0 - Error
     1 - Succefully Deleted your account
     '''
-    result = send(ApplicationStates.DELETE_ACCOUNT.value,None,None,None)
-    return result
+    result = send(ApplicationStates.DELETE_ACCOUNT.value)
+    return result['Tag']
 
+def logout():
+    '''
+    This function is to logout of the account
+    
+    Returns
+    0 - Not logged in
+    1 - Success
+    '''
+    result = send(ApplicationStates.LOGOFF.value)
+    return result['Tag']
 def done():
     '''
     This function indicates that you are done using the program
     
     Returns:
+    0 - Not logged in to an account
     1 - Success
     '''
-    
-    result = send(ApplicationStates.DISCONNECT.value,None,None,None)
-    return result
+    result = send(ApplicationStates.DISCONNECT.value)
+    return result['Tag']
 
 if __name__ == "__main__":
     #Testing area 
-    
     # print(setup("John","ASDF"))
     # print(login("John","ASDF"))
-    # print(get_services())
     # print(add_service("Dog","LOL",'DOLL'))
-    # print(add_service("STOP","LOL",'DOLL'))
-    # print(update_service("Google","DO","ROW"))
-    # print(check_service("Google"))
-    # print(deleteService("Google"))
     # print(get_services())
+    # print(add_service("STOP","LOL",'DOLL'))
+    # print(update_service(1,"A","V","D"))
+    # print(get_services())
+    # print(check_service(1))
+    # print(deleteService(1))
+    # print(get_services())
+    # print(check_service(1))
     # print(delete_account())
     print(done())

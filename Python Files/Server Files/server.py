@@ -8,19 +8,19 @@ import socket
 import threading
 import sqlite3
 import json
-import sys
 
+from Crypto.Random import get_random_bytes
 
 
 
 from os import (path,pardir)
-sys.path.append('./Server Files')
+
 import encrypt
 
 from database_functions import (add_service, add_user, check_data_from_service, create_database,
                                 delete_service, delete_user, get_master_pwd, get_key,
                                 get_user_id, get_usernames_list, list_saved_services,
-                                update_service_password, update_service_username)
+                                update_service_password, update_service_username,get_username,update_service_name)
 
 from application_states import ApplicationStates
 
@@ -54,24 +54,28 @@ def send_client(message):
     con.send(send_length)
     con.send(message)
 
-def serverEncrypt(service_username,service_password,adr):
+def serverEncrypt(service_password):
     '''
-
+    Encrypts the service password 
     
+    Requires:
+    service_username - the service username
+    service_password - the service password
+    adr - the address of the current user
     '''
-    accountUsername = get_username(account_tracker[adr])
-    accountPassword = get_master_pwd(accountUsername)
-    ciphertext, tag = encrypt.encrypt_then_mac(service_password,masterPassword,service_username,accountUsername)
-    return ciphertext, tag
+    iv = get_random_bytes(16)
+    cipher_key = get_random_bytes(16)
+    mac_key = get_random_bytes(16)
+    ciphertext, tag = encrypt.encrypt_then_mac(service_password.encode(FORMAT),iv,cipher_key,mac_key)
+    return ciphertext, tag, cipher_key, mac_key
 
-def serverDecrypt(user_id,service_name,adr):
+def serverDecrypt(user_id,service_id):
     '''
     check_data_from_service needs to give tag as well
     '''
-    service_username, ciphertext = check_data_from_service(user_id, service_name)
-    tag =""
-    service_password = encrypt.verify_then_decrypt(ciphertext,tag,service_username,account_tracker[adr])
-    return service_password
+    ciphertext, tag, cipher_key, mac_key = check_data_from_service(user_id, service_id)
+    service_password = encrypt.verify_then_decrypt(ciphertext, tag, cipher_key, mac_key)
+    return str(service_password)[2:-1]
 
 def handle_client(con,adr):
     '''
@@ -127,7 +131,6 @@ def handle_client(con,adr):
                 password = msg['SEC']
                 #  Checking if user exists
                 users_list = get_usernames_list()
-                #CHECK #34 - Make sure this number has a result
                 accessed = {
                     "Tag":0,
                     "Report":"Issue with username or password"
@@ -137,7 +140,6 @@ def handle_client(con,adr):
                         if password == get_master_pwd(username):
                             user_id = get_user_id(username)
                             account_tracker[adr] = user_id
-                            #CHECK #36 - What is this suppose to send 
                             accessed = {
                                 "Tag":1,
                                 "User_id":user_id
@@ -149,24 +151,15 @@ def handle_client(con,adr):
                 if adr in account_tracker:
                     user_id = account_tracker[adr]
                     services_list = list_saved_services(user_id)
-                    #CHECK #1 - Might need to change how I data is sent back to the client
+                    senddata = []
+                    for i in range (len(services_list)):
+                        listing = list(services_list[i])
+                        senddata.append(listing)
+                    accessed['senddata'] = senddata
                     accessed = {
-                        "Tag":1
+                        "Tag":1,
+                        "senddata": senddata
                     }
-                    i = 0
-                    for service in services_list:
-                        accessed[("sendData"+i)] = service[0]
-                        
-                    '''
-                    Did i mess this up
-                    '''
-                    # senddata = senddata[:-1]
-                    
-                    # senddata = ""
-                    # #CHECK #1 - Might need to change how I data is sent back to the client
-                    # for service in services_list:
-                    #     senddata += service[0]+"#"
-                    # senddata = senddata[:-1]
                     send_client(accessed)
                 else:
                     accessed = {
@@ -181,30 +174,13 @@ def handle_client(con,adr):
                     service_username = msg['SEC']
                     service_password = msg['THR']
                     services_list = list_saved_services(account_tracker[adr])
-                    flip = True
-                    for service in services_list:
-                        if service_name == service[0]:
-                            #CHECK #38 - update for service_id
-                            accessed = {
-                                "Tag":0,
-                                "Report":"Same Service"
-                            }
-                            flip = False
-                            break
-                    if flip:
-                        user_id = account_tracker[adr]
-                        ciphertext, tag = serverEncrypt(service_username,service_password,service_id,adr)
-                        #ASDF
-                        '''
-                        Add tag to add_service
-                        '''
-                        add_service(service_name, service_username,
-                                    ciphertext, user_id)
-                        #CHECK #18 - Make sure this number has a response in client
-                        accessed = {
-                            "Tag":1
-                        }                    
-                        #CHECK #2 - What is being sent here
+                    user_id = account_tracker[adr]
+                    ciphertext, tag, cipher_key, mac_key = serverEncrypt(service_password)
+                    add_service(service_name, service_username,
+                        ciphertext, user_id,tag, cipher_key, mac_key)
+                    accessed = {
+                         "Tag":1
+                    }                    
                     send_client(accessed)  
                 else:
                     accessed = {
@@ -224,16 +200,18 @@ def handle_client(con,adr):
                     "Report":"Error"
                     }
                     #Get Service_ID
-                    service_name = msg['FIR']
+                    service_id = msg['FIR']
                     user_id = account_tracker[adr]
                     services_list = list_saved_services(user_id)
-                    
                     for service in services_list:
-                        if service_name == service:
-                            service_password = serverDecrypt(user_id,service_name,adr)
+                        service = list(service)
+                        if service_id == service[0]:
+                            service_password = serverDecrypt(user_id,service_id)
                             accessed = {
                                 "Tag":1,
-                                "Username": service_username,
+                                "ServiceID":service_id,
+                                "ServiceName": service[1],
+                                "Username": service[2],
                                 "Password": service_password
                             }
                             break
@@ -243,43 +221,67 @@ def handle_client(con,adr):
             # Update Username and Password for a service
             elif msg['CODE'] == ApplicationStates.UPDATE_SERVICE.value:
                 if adr in account_tracker:
-                    service_name = msg['FIR']
-                    new_service_username = msg['SEC']
-                    new_service_password = msg['THR']
+                    service_id = msg['FIR']
+                    new_service_name = msg['SEC']
+                    new_service_username = msg['THR']
+                    new_service_password = msg['FOR']
                     user_id = account_tracker[adr]
+                    
                     services_list = list_saved_services(user_id)
-                    flip = True
-                    for name in services_list:
-                        if name == service_name:
-                            flip = False
-                            if new_service_username != None and new_service_password != None:
-                                new_service_password, tag = serverEncrypt(new_service_name,service_password,adr)
-                                '''
-                                Add tag to update_service_password
-                                '''
-                                update_service_password(
-                                    user_id, service_name, new_service_password)
-                                update_service_username(
-                                    user_id, service_name, new_service_username)
-                                break
-                            elif new_service_username == None:
-                                '''
-                                Add tag
-                                '''
-                                new_service_password,tag = serverEncrypt(service_name,service_password,adr)
-                                update_service_password(user_id, service_name, new_service_password)
-                                break
-                            elif new_service_password == None:
-                                update_service_username(user_id, service_name, new_service_username)
-                                break
+                    accessed = {
+                        'Tag':2
+                    }
+                    for service in services_list:
+                        serv =list(service)
+                        if service_id == serv[0]:
                             accessed = {
-                                "Tag":1
+                                'Tag': 1,
+                                'Name':0,
+                                'User':0,
+                                'Pass':0,
                             }
-                    if flip:
-                        accessed = {
-                            "Tag":0,
-                            "Report":"Error"
-                        }                    
+                            
+                            if new_service_username != None: 
+                                update_service_username(
+                                    user_id, service_id, new_service_username)
+                                accessed['User'] = 1
+                                    
+                            if new_service_password != None:
+                                ciphertext, tag, cipher_key, mac_key = serverEncrypt(new_service_password)
+                                update_service_password(
+                                    user_id, service_id, ciphertext, tag, cipher_key, mac_key)
+                                accessed['Pass'] = 1
+                            
+                            if new_service_name != None:
+                                update_service_name(user_id, service_id,new_service_name)
+                                accessed['name'] = 1
+                            break
+                    # for name in services_list:
+                    #     if name == service_name:
+                    #         flip = False
+                    #         if new_service_username != None and new_service_password != None:
+                    #             ciphertext, tag, cipher_key, mac_key = serverEncrypt(service_passwor,)
+                    #             update_service_password(
+                    #                 user_id, service_id, ciphertext, tag, iv, cipher_key, mac_key)
+                    #             update_service_username(
+                    #                 user_id, service_id, new_service_username)
+                    #             break
+                    #         elif new_service_username == None:
+                    #             cipher_key,tag = serverEncrypt(service_password)
+                    #             update_service_password(
+                    #                 user_id, service_id, ciphertext, tag, cipher_key, mac_key)
+                    #             break
+                    #         elif new_service_password == None:
+                    #             update_service_username(user_id, service_id, new_service_username)
+                    #             break
+                    #         accessed = {
+                    #             "Tag":1
+                    #         }
+                    # if flip:
+                    #     accessed = {
+                    #         "Tag":0,
+                    #         "Report":"Error"
+                    #     }                    
                     send_client(accessed)   
                 else:
                     accessed = {
@@ -293,17 +295,14 @@ def handle_client(con,adr):
                     service_name = msg['FIR']
                     user_id = account_tracker[adr]
                     services_list = list_saved_services(user_id)
-                    #CHECK #29 - Make sure this value has action in client
                     accessed = {
                         "Tag":0,
                         "Report":"Does not exist"
                     }
                     for name in services_list:
                         if name[0] == service_name:
-                            #CHECK #28 - Make sure this has value in client
                             accessed = {
                                 "Tag":1,
-                                "Report":"Does not exist"
                             }
                             delete_service(user_id, service_name)
                             break
@@ -317,7 +316,6 @@ def handle_client(con,adr):
                     send_client(accessed)
             # Delete account
             elif msg['CODE'] == ApplicationStates.DELETE_ACCOUNT.value:
-                #CHECK #4 - maybe require a username password verification
                 if adr in account_tracker:
                     user_id = account_tracker[adr]
                     delete_user(user_id)
@@ -337,15 +335,31 @@ def handle_client(con,adr):
                 print(f"[{adr}] Has left the application")
                 connected = False
                 accessed = {
-                    "Tag":"1"
+                    "Tag":1
                 }
                 send_client(accessed)
+                
+            elif msg['CODE'] == ApplicationStates.LOGOFF.value:
+                if adr in account_tracker:
+                    del account_tracker[adr]
+                    accessed = {
+                        "Tag":1
+                    }
+                    send_client(accessed)
+                else:
+                    accessed = {
+                        "Tag":0
+                    }
+                    send_client(accessed)
+                    
+
+                
     con.close()
 
 if __name__ == "__main__":
     if not path.exists('passwords.db'):
         create_database()
-        print('Dayabase Created')
+        print('Database Created')
     server.listen()
     print(f"Connect to {SERVER}")
     while True:

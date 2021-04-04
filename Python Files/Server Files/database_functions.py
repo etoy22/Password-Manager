@@ -33,6 +33,9 @@ def create_database():
         "service_name" TEXT NOT NULL,
         "username" TEXT NOT NULL,
         "password" BLOB NOT NULL,
+        "tag" BLOB NOT NULL,
+        "cipher_key" BLOB NOT NULL,
+        "mac_key" BLOB NOT NULL,
         "user_id" INT NOT NULL,
         CONSTRAINT fk_users
         FOREIGN KEY ("user_id")
@@ -93,6 +96,24 @@ def get_master_pwd(username):
 
     return master_password[0]
 
+def get_username(ID):
+    '''
+     SQL query to retrieve id of a given user
+
+    Parameters:
+      username(string): name of the user wich id password is required
+
+    Returns:
+      user_id (integer): id of the user  
+    '''
+    conn, cursor = connect()
+    cursor.execute(f'SELECT username FROM USERS WHERE id="{ID}"')
+    username = cursor.fetchone()[0]
+    
+    disconnect(conn)
+    
+    return username
+    
 
 def get_user_id(username):
     """
@@ -143,7 +164,7 @@ def list_saved_services(user_id):
     """
     conn, cursor = connect()
 
-    cursor.execute(f'SELECT service_name FROM services WHERE user_id="{user_id}"')
+    cursor.execute(f'SELECT service_id,service_name, username FROM services WHERE user_id="{user_id}"')
     services = cursor.fetchall()
     disconnect(conn)
 
@@ -170,7 +191,7 @@ def get_key(user_id):
     return key.encode()
 
 
-def add_service(service_name, username, encrypted_password, user_id):
+def add_service(service_name, username, encrypted_password, user_id, tag, cipher_key, mac_key):
     """
     SQL query to add a service to the services database
 
@@ -179,17 +200,19 @@ def add_service(service_name, username, encrypted_password, user_id):
       username (string): username of user on service to be added
       encrypted_password (bytestring): encrypted password of user on service to be added
       user_id (integer): id of the user
-
+      tag: result of encryption
+      cipher_key: cipher_key for encryption
+      mac_key: mac_key for encryption
     """
     conn, cursor = connect()
 
     cursor.execute(f'''
-                    INSERT INTO services (service_name, username, password, user_id)
-                    VALUES ("{service_name}", "{username}", "{encrypted_password}", "{user_id}")''')
+                    INSERT INTO services (service_name, username, password, user_id, tag,  cipher_key, mac_key)
+                    VALUES (?, ?, ?,?,?,?,?)''', (service_name, username, encrypted_password, user_id, tag,  cipher_key, mac_key))
     disconnect(conn)
 
 
-def check_data_from_service(user_id, service_name):
+def check_data_from_service(user_id, service_id):
     """
     SQL query to retrieve data from a service from the services database
 
@@ -204,16 +227,15 @@ def check_data_from_service(user_id, service_name):
     conn, cursor = connect()
 
     cursor.execute(f'''
-                    SELECT username, password
+                    SELECT password, tag, cipher_key, mac_key
                     FROM services
                     WHERE user_id="{user_id}"
-                    AND service_name="{service_name}"
+                    AND service_id="{service_id}"
                     ''')
 
-    results = cursor.fetchone()
+    results = list(cursor.fetchone())
     disconnect(conn)
-
-    return results[0], results[1]
+    return results[0], results[1], results[2], results[3]
 
 
 def update_service_username(user_id, service, username):
@@ -222,7 +244,7 @@ def update_service_username(user_id, service, username):
 
     Parameters:
       user_id (integer): id of the user updating the username
-      service (string): name of the service to be updated
+      service (string): id of the service to be updated
       username (string): new username on the service
 
     """
@@ -230,19 +252,20 @@ def update_service_username(user_id, service, username):
 
     cursor.execute(f'''
                     UPDATE services
-                    SET username="{username}"
-                    WHERE user_id="{user_id}"
-                    AND service_name="{service}"''')
+                    SET username= ?
+                    WHERE user_id= ?
+                    AND service_id=?
+                    ''', (username,user_id,service))
     disconnect(conn)
 
 
-def update_service_password(user_id, service, password):
+def update_service_password(user_id, service, password,tag, cipher_key, mac_key):
     """
     SQL query to update the password of a service in the services database
 
     Parameters:
       user_id (integer): id of the user updating the username
-      service (string): name of the service to be updated
+      service (string): id of the service to be updated
       password (string): new encrypted password on the service
 
     """
@@ -250,21 +273,44 @@ def update_service_password(user_id, service, password):
 
     cursor.execute(f'''
                     UPDATE services
-                    SET password="{password}"
-                    WHERE user_id="{user_id}"
-                    AND service_name="{service}"''')
+                    SET password= ?,
+                    tag = ?,
+                    cipher_key = ?,
+                    mac_key = ?
+                    WHERE user_id= ?
+                    AND service_id=?''', (password,tag,cipher_key,mac_key,user_id,service))
     disconnect(conn)
 
 
-def delete_service(user_id, service):
+def update_service_name(user_id, service, name):
+    """
+    SQL query to update the username of a service in the services database
+
+    Parameters:
+      user_id (integer): id of the user updating the name of the name
+      service (string): id of the service to be updated
+      name (string): new name of the service
+
+    """
+    conn, cursor = connect()
+
+    cursor.execute(f'''
+                    UPDATE services
+                    SET service_name="{name}"
+                    WHERE user_id="{user_id}"
+                    AND service_id="{service}"''')
+    disconnect(conn)
+
+
+def delete_service(user_id, serviceID):
     """
     SQL querry to delete a given service from the services database
 
     Parameters:
       user_id (integer): id of the user to have a service deleted
-      service (string): name of the service to be deleted
+      serviceID (string): ID of the service to be deleted
     """
     conn, cursor = connect()
 
-    cursor.execute(f'DELETE FROM services WHERE user_id="{user_id}" AND service_name="{service}"')
+    cursor.execute(f'DELETE FROM services WHERE user_id="{user_id}" AND service_ID="{serviceID}"')
     disconnect(conn)
