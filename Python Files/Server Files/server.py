@@ -8,9 +8,14 @@ import socket
 import threading
 import sqlite3
 import json
-import encrypt
+import sys
 
-from os import path
+
+
+
+from os import (path,pardir)
+sys.path.append('./Server Files')
+import encrypt
 
 from database_functions import (add_service, add_user, check_data_from_service, create_database,
                                 delete_service, delete_user, get_master_pwd, get_key,
@@ -51,11 +56,13 @@ def send_client(message):
 
 def serverEncrypt(service_username,service_password,adr):
     '''
+
     
     '''
     accountUsername = get_username(account_tracker[adr])
     accountPassword = get_master_pwd(accountUsername)
-    return ciphertext, tag = encrypt.encrypt_then_mac(service_password,masterPassword,service_username,accountUsername)
+    ciphertext, tag = encrypt.encrypt_then_mac(service_password,masterPassword,service_username,accountUsername)
+    return ciphertext, tag
 
 def serverDecrypt(user_id,service_name,adr):
     '''
@@ -108,7 +115,7 @@ def handle_client(con,adr):
                         send_client(accessed)
                 else:
                     accessed = {
-                        "Tag":0,
+                        "Tag":2,
                         "Report":"Already exist"
                     }
                     send_client(accessed)
@@ -212,6 +219,11 @@ def handle_client(con,adr):
                     "Report":"Error"
                 }
                 if adr in account_tracker:
+                    accessed =  {
+                    "Tag": 2,
+                    "Report":"Error"
+                    }
+                    #Get Service_ID
                     service_name = msg['FIR']
                     user_id = account_tracker[adr]
                     services_list = list_saved_services(user_id)
@@ -264,10 +276,9 @@ def handle_client(con,adr):
                                 "Tag":1
                             }
                     if flip:
-                        #CHECK #25 - Make sure this has a value in client
                         accessed = {
                             "Tag":0,
-                            "Report":"Service does not exist"
+                            "Report":"Error"
                         }                    
                     send_client(accessed)   
                 else:
