@@ -54,7 +54,7 @@ def send_client(message):
     con.send(send_length)
     con.send(message)
 
-def serverEncrypt(service_password):
+def serverEncrypt(service_password, iv=None, cipher_key=None,mac_key=None):
     '''
     Encrypts the service password 
     
@@ -63,9 +63,12 @@ def serverEncrypt(service_password):
     service_password - the service password
     adr - the address of the current user
     '''
-    iv = get_random_bytes(16)
-    cipher_key = get_random_bytes(16)
-    mac_key = get_random_bytes(16)
+    if iv == None:
+        iv = get_random_bytes(16)
+    if cipher_key == None:
+        cipher_key = get_random_bytes(16)
+    if mac_key == None:
+        mac_key = get_random_bytes(16)
     ciphertext, tag = encrypt.encrypt_then_mac(service_password.encode(FORMAT),iv,cipher_key,mac_key)
     return ciphertext, tag, cipher_key, mac_key
 
@@ -123,7 +126,6 @@ def handle_client(con,adr):
                         "Report":"Already exist"
                     }
                     send_client(accessed)
-                
             #Case if someone attempts to login
             elif msg['CODE'] == ApplicationStates.LOGIN.value:
                 #Change earlier than this so that it actually requires the username and passwords to be correct
@@ -154,6 +156,7 @@ def handle_client(con,adr):
                     senddata = []
                     for i in range (len(services_list)):
                         listing = list(services_list[i])
+                        listing[3] = str(listing)[2:-1]
                         senddata.append(listing)
                     accessed['senddata'] = senddata
                     accessed = {
@@ -255,33 +258,7 @@ def handle_client(con,adr):
                             if new_service_name != None:
                                 update_service_name(user_id, service_id,new_service_name)
                                 accessed['name'] = 1
-                            break
-                    # for name in services_list:
-                    #     if name == service_name:
-                    #         flip = False
-                    #         if new_service_username != None and new_service_password != None:
-                    #             ciphertext, tag, cipher_key, mac_key = serverEncrypt(service_passwor,)
-                    #             update_service_password(
-                    #                 user_id, service_id, ciphertext, tag, iv, cipher_key, mac_key)
-                    #             update_service_username(
-                    #                 user_id, service_id, new_service_username)
-                    #             break
-                    #         elif new_service_username == None:
-                    #             cipher_key,tag = serverEncrypt(service_password)
-                    #             update_service_password(
-                    #                 user_id, service_id, ciphertext, tag, cipher_key, mac_key)
-                    #             break
-                    #         elif new_service_password == None:
-                    #             update_service_username(user_id, service_id, new_service_username)
-                    #             break
-                    #         accessed = {
-                    #             "Tag":1
-                    #         }
-                    # if flip:
-                    #     accessed = {
-                    #         "Tag":0,
-                    #         "Report":"Error"
-                    #     }                    
+                            break   
                     send_client(accessed)   
                 else:
                     accessed = {
@@ -337,8 +314,7 @@ def handle_client(con,adr):
                 accessed = {
                     "Tag":1
                 }
-                send_client(accessed)
-                
+                send_client(accessed)            
             elif msg['CODE'] == ApplicationStates.LOGOFF.value:
                 if adr in account_tracker:
                     del account_tracker[adr]
@@ -350,10 +326,7 @@ def handle_client(con,adr):
                     accessed = {
                         "Tag":0
                     }
-                    send_client(accessed)
-                    
-
-                
+                    send_client(accessed)   
     con.close()
 
 if __name__ == "__main__":

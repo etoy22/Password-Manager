@@ -102,6 +102,8 @@ def get_services():
     Returns 
     0 - The account is not logged in
     Array - should have all current services
+    
+    
     will look like this 
     Array[i] - i repersents differnet services
     Array[i][0] - Service Id will not show up on the screen but is important this will be sent back to the server
@@ -223,16 +225,16 @@ def done():
 
 if __name__ == "__main__":
     #Testing area 
-    # print(setup("John","ASDF"))
-    # print(login("John","ASDF"))
-    # print(add_service("Dog","LOL",'DOLL'))
-    # print(get_services())
-    # print(add_service("STOP","LOL",'DOLL'))
-    # print(update_service(1,"A","V","D"))
-    # print(get_services())
-    # print(check_service(1))
-    # print(deleteService(1))
-    # print(get_services())
-    # print(check_service(1))
-    # print(delete_account())
+    print(setup("John","ASDF"))
+    print(login("John","ASDF"))
+    print(add_service("Dog","LOL",'DOLL'))
+    print(get_services())
+    print(add_service("STOP","LOL",'DOLL'))
+    print(update_service(1,"A","V","D"))
+    print(get_services())
+    print(check_service(1))
+    print(deleteService(1))
+    print(get_services())
+    print(check_service(1))
+    print(delete_account())
     print(done())

@@ -164,7 +164,7 @@ def list_saved_services(user_id):
     """
     conn, cursor = connect()
 
-    cursor.execute(f'SELECT service_id,service_name, username FROM services WHERE user_id="{user_id}"')
+    cursor.execute(f'SELECT service_id,service_name, username,password FROM services WHERE user_id="{user_id}"')
     services = cursor.fetchall()
     disconnect(conn)
 
