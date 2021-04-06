@@ -176,7 +176,7 @@ def get_key(user_id):
     Get encryption key of the given user
 
     Parameters:
-      user_id(integer): id of the user wich key is required
+      user_id(integer): id of the user which key is required
 
     Returns:
       key (bytestring): encryption key of the user

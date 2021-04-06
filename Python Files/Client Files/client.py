@@ -91,6 +91,7 @@ def login(user,pas):
     returns:
     0 - This means there is an error
     1 - The login was successful
+    2 - Already logged into an account
     '''
     result =  send(ApplicationStates.LOGIN.value,user,pas)
     return result["Tag"]
@@ -109,6 +110,7 @@ def get_services():
     Array[i][0] - Service Id will not show up on the screen but is important this will be sent back to the server
     Array[i][1] - name of the service
     Array[i][2] - Username for that service
+    Array[i][3] - Hashed Password for that service
     '''
     result = send(ApplicationStates.GET_SERVICES.value)
     if (result["Tag"] == 0):
@@ -145,14 +147,12 @@ def check_service(sID):
     2 - Logged in but an error
     info = {
         "ServiceID:service_id,
-         "ServiceName": service_name,
+        "ServiceName": service_name,
         "Username": service_username,
         "Password": service_password
     } - this means that you successfully got recieved the account
     '''
     result = send(ApplicationStates.CHECK_SERVICE.value,sID)
-    if (isinstance(result['Tag'],int)):
-        return result['Tag'] 
     return result
 
 def update_service(sID,service_name,user,pas):
@@ -222,19 +222,44 @@ def done():
     '''
     result = send(ApplicationStates.DISCONNECT.value)
     return result['Tag']
+def ver():
+    '''
+    This function says which services that the user owns needs to be changed
+    
+    Returns
+    {'Tag':0} - Error not logged in
+    {'Tag':1,
+    'Info':Array} - Success
+    
+    In the Array
+    Array[i] - This sorts through the different services that need to be changed
+    Array[i][0] - This is the service id
+    Array[i][1] - This is the service name
+    Array[i][2] - This is the service user name
+    Array[i][3] - This is the service hased password
+    Array[i][4] - If this is true it means that the password length is smaller than 6.
+                    Otherwise this returns false
+    Array[i][5] - This means that there is a repeat of this password in a different service
+    '''
+    result = send(ApplicationStates.VERIFY.value)
+    return result
 
 if __name__ == "__main__":
     #Testing area 
     # print(setup("John","ASDF"))
+    # print('test')
     # print(login("John","ASDF"))
-    # print(add_service("Dog","LOL",'DOLL'))
+    # print(setup("Jake","ASDF"))
+
+    # print(add_service("A","LOL",'ASDFGH'))
+    # print(deleteService(31))
     # print(get_services())
-    # print(add_service("STOP","LOL",'DOLL'))
-    # print(update_service(1,"A","V","D"))
+    # print(update_service(32,"A","V","D"))
     # print(get_services())
-    # print(check_service(1))
-    # print(deleteService(1))
+    # print(check_service(32))
+
     # print(get_services())
     # print(check_service(1))
     # print(delete_account())
+    print(ver())
     print(done())

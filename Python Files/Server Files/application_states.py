@@ -16,3 +16,4 @@ class ApplicationStates(enum.Enum):
     DELETE_ACCOUNT = 9
     LOGOFF = 10
     DISCONNECT = 11
+    VERIFY = 12

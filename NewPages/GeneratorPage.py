@@ -12,7 +12,6 @@ def Display():
     root.state('zoomed')
     root.title('Password Generator')
     root.geometry('700x700')
-    root['bg'] = '#263D42'
     nums =tk.IntVar(value=1)
     spec = tk.IntVar(value=1)
     ups = tk.IntVar(value=1)
@@ -23,7 +22,7 @@ def Display():
     var = tk.StringVar()
     text = gen.password(20,1,1,1,1)
     var.set(text)
-    passed.config(textvariable=var,relief='flat',width = 100, justify='center')
+    passed.config(textvariable=var,relief='flat',width = 150, justify='center')
     passed.pack()
     nums =tk.IntVar(value=1)
     spec = tk.IntVar(value=1)
