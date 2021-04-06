@@ -20,7 +20,8 @@ import encrypt
 from database_functions import (add_service, add_user, check_data_from_service, create_database,
                                 delete_service, delete_user, get_master_pwd, get_key,
                                 get_user_id, get_usernames_list, list_saved_services,
-                                update_service_password, update_service_username,get_username,update_service_name)
+                                update_service_password, update_service_username,
+                                get_username,update_service_name)
 
 from application_states import ApplicationStates
 
@@ -128,26 +129,32 @@ def handle_client(con,adr):
                     send_client(accessed)
             #Case if someone attempts to login
             elif msg['CODE'] == ApplicationStates.LOGIN.value:
+                if adr not in account_tracker:
                 #Change earlier than this so that it actually requires the username and passwords to be correct
-                username = msg['FIR']
-                password = msg['SEC']
-                #  Checking if user exists
-                users_list = get_usernames_list()
-                accessed = {
-                    "Tag":0,
-                    "Report":"Issue with username or password"
-                } #The username or password has an issue
-                for user in users_list:
-                    if username == user[0]:
-                        if password == get_master_pwd(username):
-                            user_id = get_user_id(username)
-                            account_tracker[adr] = user_id
-                            accessed = {
-                                "Tag":1,
-                                "User_id":user_id
-                            }
-                            break
-                send_client(accessed)
+                    username = msg['FIR']
+                    password = msg['SEC']
+                    #  Checking if user exists
+                    users_list = get_usernames_list()
+                    accessed = {
+                        "Tag":0,
+                        "Report":"Issue with username or password"
+                    } #The username or password has an issue
+                    for user in users_list:
+                        if username == user[0]:
+                            if password == get_master_pwd(username):
+                                user_id = get_user_id(username)
+                                account_tracker[adr] = user_id
+                                accessed = {
+                                    "Tag":1,
+                                    "User_id":user_id
+                                }
+                                break
+                    send_client(accessed)
+                else:
+                    accessed = {
+                        'Tag':2,
+                        "Report":"Second account loging in"
+                    }
             # send service list
             elif msg['CODE'] == ApplicationStates.GET_SERVICES.value:
                 if adr in account_tracker:
@@ -283,7 +290,6 @@ def handle_client(con,adr):
                             }
                             delete_service(user_id, service_name)
                             break
-                    
                     send_client(accessed)
                 else:
                     accessed = {
@@ -305,6 +311,58 @@ def handle_client(con,adr):
                         "Report":"Does not exist"
                     }
                 send_client(accessed)
+            elif msg['CODE'] == ApplicationStates.VERIFY.value:
+                if adr in account_tracker:
+                    store = list()
+                    result = list_saved_services(account_tracker[adr])
+                    for i in range (len(result)):
+                        checker = list(result[i])
+                        holder = serverDecrypt(account_tracker[adr],checker[0])
+                        store.append([i,holder])
+                    hold = list()
+                    accessed = {
+                        "Tag": 1
+                    }
+                    relist = list() #Holds if its a repeat
+                    smallist = list()
+                    for i in range(len(store)):
+                        repeat = False
+                        small = False
+                        if store[i][1] in hold:
+                            repeat = True
+                            count = hold.index(store[i][1])
+                            relist[count] = True
+                        if len(store[i][1]) < 6:
+                            small = True
+                        hold.append(store[i][1])
+                        relist.append(repeat)
+                        smallist.append(small)
+                    sending = list()
+                    for i in range(len(hold)):
+                        temp = list(result[i])
+                        passed = str(temp[3])[2:-1]
+                        if smallist[i] and relist[i]:
+                            sending.append([temp[0],temp[1],temp[2],passed,True,True])
+                        elif smallist[i]:
+                            sending.append([temp[0],temp[1],temp[2],passed,True,False])
+                        elif relist[i]:
+                            sending.append([temp[0],temp[1],temp[2],passed,False,True])
+                    holder = ''
+                    hold.clear()
+                    relist.clear()
+                    smallist.clear()
+                    result.clear()
+                    accessed = {
+                        "Tag": 1,
+                        "Info": sending
+                    }
+                    send_client(accessed) 
+                else:
+                    accessed = {
+                        "Tag":0,
+                        "Report":"Does not exist"
+                    }
+                    send_client(accessed) 
             #Disconnect from server
             elif msg['CODE'] == ApplicationStates.DISCONNECT.value:
                 if adr in account_tracker:
@@ -326,7 +384,7 @@ def handle_client(con,adr):
                     accessed = {
                         "Tag":0
                     }
-                    send_client(accessed)   
+                    send_client(accessed) 
     con.close()
 
 if __name__ == "__main__":
