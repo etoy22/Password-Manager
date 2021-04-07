@@ -327,6 +327,14 @@ def get_send_pass(rec_user,service_id):
     result = send(ApplicationStates.RECIEVE_ACCOUNT_PASSWORD.value,rec_user,service_id)
     return result
 
+def delete_sending(rec_username,service_id):
+    result = send(ApplicationStates.DELETE_SENDING.value,rec_username,service_id)
+    return result
+
+def delete_rec(sending_username,service_id):
+    result = send(ApplicationStates.DELETE_SENDING.value,sending_username,service_id)
+    return result
+
 
 
 if __name__ == "__main__":
