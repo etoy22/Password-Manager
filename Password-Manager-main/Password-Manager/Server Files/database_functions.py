@@ -43,6 +43,20 @@ def create_database():
         );
     ''')
 
+    cursor.execute('''
+                  CREATE TABLE "sending" (
+                    "sending_id" INTEGER NOT NULL,
+                    "recieve_id" INTEGER NOT NULL,
+                    "service_id" INTEGER NOT NULL,
+                    "password" TEXT NOT NULL,
+                    FOREIGN KEY ("sending_id")
+                    REFERENCES users(id),
+                    FOREIGN KEY ("recieve_id")
+                    REFERENCES user(id),
+                    FOREIGN KEY ("service_id")
+                    REFERENCES services(service_id)
+                    );
+                   ''')
     disconnect(conn)
 
 
@@ -147,7 +161,7 @@ def delete_user(user_id):
 
     cursor.execute(f'DELETE FROM users WHERE id={user_id}')
     cursor.execute(f'DELETE FROM services WHERE user_id={user_id}')
-
+    cursor.execute(f'DELETE FROM sending WHERE sending_id={user_id} OR recieve_id={user_id}')
     disconnect(conn)
 
 
@@ -205,7 +219,6 @@ def add_service(service_name, username, encrypted_password, user_id, tag, cipher
       mac_key: mac_key for encryption
     """
     conn, cursor = connect()
-    print(service_name, username, encrypted_password, user_id, tag,  cipher_key, mac_key)
     cursor.execute(f'''
                     INSERT INTO services (service_name, username, password, user_id, tag,  cipher_key, mac_key)
                     VALUES (?, ?, ?,?,?,?,?)''', (service_name, username, encrypted_password, user_id, tag,  cipher_key, mac_key))
@@ -218,7 +231,7 @@ def check_data_from_service(user_id, service_id):
 
     Parameters:
       user_id (integer): id of the user
-      service_name (string): name of the service to be checked
+      service_id (string): name of the service to be checked
 
     Returns:
       results[0] (string): username on the given service
@@ -313,4 +326,97 @@ def delete_service(user_id, serviceID):
     conn, cursor = connect()
 
     cursor.execute(f'DELETE FROM services WHERE user_id="{user_id}" AND service_ID="{serviceID}"')
+    cursor.execute(f'DELETE FROM sending WHERE recieve_id="{user_id}" AND service_id = "{serviceID}"')
+    cursor.execute(f'DELETE FROM sending WHERE sending_id={user_id} AND service_id={serviceID}')
     disconnect(conn)
+
+def send_service(user_id,rec_id,service_id,password):
+    conn, cursor = connect()
+    cursor.execute(f'''
+                   SELECT EXISTS(
+                     SELECT 1
+                     FROM sending
+                     WHERE sending_id = ? AND recieve_id = ? AND service_id = ?
+                   );
+                   ''', (user_id,rec_id,service_id))
+    hold = cursor.fetchone()
+    if hold[0] == 0:
+      cursor.execute(f'''
+                  INSERT INTO sending (sending_id,recieve_id,service_id,password)
+                  VALUES (?,?,?,?)
+                  ''', (user_id,rec_id,service_id,password))
+    disconnect(conn)
+    
+    return hold[0]
+def list_rec (rec_id):
+    conn, cursor = connect()
+
+
+    cursor.execute(f'''
+                   SELECT sending_id, service_id
+                   FROM sending
+                   WHERE recieve_id = "{rec_id}"
+                   ''')
+    sending_info = cursor.fetchall()
+    disconnect(conn)
+    return (sending_info)
+    # return sending_info
+
+def transfer(sending_id,rec_id,service_id,password):
+  conn, cursor = connect()
+  cursor.execute(f'''
+                   SELECT EXISTS(
+                     SELECT 1
+                     FROM sending
+                     WHERE sending_id = ? AND recieve_id = ? AND service_id = ? AND password = ?
+                   );
+                   ''', (sending_id,rec_id,service_id,password))
+  hold = cursor.fetchone()
+  return hold[0]
+  
+  
+def delete_sending(sending_id,rec_id,service_id):
+    conn, cursor = connect()
+
+    cursor.execute(f'''
+                   DELETE FROM sending
+                   WHERE sending_id= ? 
+                   AND recieve_id= ?
+                   AND service_id = ?
+                   ''', (sending_id,rec_id,service_id))
+    disconnect(conn)
+    return 1
+
+def get_password_sending(sending_id,rec_id,service_id):
+    conn, cursor = connect()
+    cursor.execute(f'''
+                   SELECT password
+                   FROM sending
+                   WHERE sending_id = ? AND recieve_id = ? AND service_id = ?
+                    ''', (sending_id,rec_id,service_id))
+    hold = cursor.fetchone()
+    disconnect(conn)
+    return hold
+  
+def get_out_going(user_id):
+  conn, cursor = connect()
+
+
+  cursor.execute(f'''
+                  SELECT recieve_id,service_id
+                   FROM sending
+                   WHERE sending_id = "{user_id}"
+                   ''')
+  sending_info = cursor.fetchall()
+  disconnect(conn)
+  return (sending_info)
+
+def get_severice_data(user_id,service_id):
+  conn, cursor = connect()
+  cursor.execute(f'''
+                 SELECT service_name
+                 FROM services
+                 WHERE user_id = ? AND service_id = ?''', (user_id,service_id))
+  sending_info = cursor.fetchall()
+  disconnect(conn)
+  return (sending_info)

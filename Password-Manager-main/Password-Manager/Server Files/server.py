@@ -16,12 +16,13 @@ from Crypto.Random import get_random_bytes
 from os import (path,pardir)
 
 import encrypt
-
+import Generator
 from database_functions import (add_service, add_user, check_data_from_service, create_database,
                                 delete_service, delete_user, get_master_pwd, get_key,
                                 get_user_id, get_usernames_list, list_saved_services,
                                 update_service_password, update_service_username,
-                                get_username,update_service_name)
+                                get_username,update_service_name,send_service, list_rec,
+                                transfer,get_password_sending,delete_sending,get_out_going)
 
 from application_states import ApplicationStates
 
@@ -363,6 +364,155 @@ def handle_client(con,adr):
                         "Report":"Does not exist"
                     }
                     send_client(accessed) 
+            elif msg['CODE'] == ApplicationStates.SEND_ACCOUNT.value:
+                #Our sending to another person 
+                if adr in account_tracker:
+                    rec_user_name = msg['FIR']
+                    listing = get_usernames_list()
+                    exists = False
+                    for name in listing:
+                        if name[0]==rec_user_name:
+                            exists = True
+                            break
+                    if exists:
+                        rec_id = get_user_id(rec_user_name)
+                        service_id = msg['SEC']
+                        user_id = account_tracker[adr]
+                        password = Generator.password(25)
+                        if rec_id == user_id:
+                            accessed = {
+                                "Tag":3,
+                                "Report":"send to self"
+                            }
+                        else:
+                            value = send_service(user_id,rec_id,service_id,password)
+                            if value == 0:
+                                accessed = {
+                                    "Tag":1,
+                                    "Password":password
+                                }
+                            else:
+                                accessed = {
+                                    "Tag":2,
+                                    "Report":"Resent password to same person"
+                                }
+                            send_client(accessed)
+                    else:
+                        accessed = {
+                            "Tag":4,
+                            "Report": "Other username doesnt exist"
+                        }
+                        send_client(accessed)
+                else:
+                    accessed = {
+                        "Tag":0
+                    }
+                    send_client(accessed)
+            elif msg['CODE'] == ApplicationStates.RECIEVE_ACCOUNTS.value:
+                #Recieve protocal
+                if adr in account_tracker: 
+                    user_id = account_tracker[adr]
+                    data = list_rec(user_id)
+                    for i in range(len(data)):
+                        data[i] = list(data[i])
+                        data[i].append(get_username(data[i][0]))
+                        data[i].append(get_severice_data(user_id,data[i][1]))
+                    accessed = {
+                        "Tag":1,
+                        "Info":data
+                    }
+                    send_client(accessed)
+                else:
+                    accessed = {
+                        "Tag":0
+                    }
+                    send_client(accessed)
+            elif msg['CODE'] == ApplicationStates.RECIEVE_ACCOUNT_PASSWORD.value:
+                #Transfer protocal
+                if adr in account_tracker: 
+                    sending_username = msg['FIR']
+                    sending_id = get_user_id(sending_username)
+                    service_id = msg['SEC']
+                    password = msg['THR']
+                    user_id = account_tracker[adr]
+                    value = transfer(sending_id,user_id,service_id,password)
+                    if value:
+                        services_list = list_saved_services(sending_id)
+                        for service in services_list:
+                            service = list(service)
+                            if service_id == service[0]:
+                                service_password = serverDecrypt(sending_id,service_id)
+                                ciphertext, tag, cipher_key, mac_key = serverEncrypt(service_password)
+                                add_service(service[1], service[2],
+                                    ciphertext, user_id,tag, cipher_key, mac_key)
+                                accessed = {
+                                    "Tag":1,
+                                }
+                                break
+                        delete_sending(sending_id,user_id,service_id)
+                        send_client(accessed)  
+                    else:
+                        accessed = {
+                            "Tag":2
+                        }
+                        return accessed
+                else:
+                    accessed = {
+                        "Tag":0
+                    }
+                    send_client(accessed)
+            elif msg['CODE'] == ApplicationStates.GET_SENDING_PASSWORD.value:
+                #Get password protocal
+                if adr in account_tracker: 
+                    rec_username = msg['FIR'] 
+                    rec_id = get_user_id(rec_username)
+                    service_id = msg['SEC']
+                    user_id = account_tracker[adr]
+                    password = get_password_sending(user_id,rec_id,service_id)
+                    accessed = {
+                        "Tag":1,
+                        "Password":password
+                    }
+                    send_client(accessed)
+                else:
+                    accessed = {
+                        "Tag":0
+                    }
+                    send_client(accessed)
+            elif msg['CODE'] == ApplicationStates.GET_SENDING_ACCOUNT.value:
+                if adr in account_tracker:
+                    user_id = account_tracker[adr]
+                    result = get_out_going(user_id)
+                    for data in result:
+                        data = list(data)
+                        data.append(get_username(data[0]))
+                        data[i].append(get_severice_data(user_id,data[1]))
+                    accessed = {
+                        "Tag":1,
+                        "Info":result
+                    }
+                    send_client(accessed)
+                else:
+                    accessed = {
+                        "Tag":0
+                    }
+                    send_client(accessed)
+            elif msg['CODE'] == ApplicationStates.DELETE_SENDING.value:
+                if adr in account_tracker:
+                    print('test')
+                else:
+                    accessed = {
+                        "Tag":0
+                    }
+                    send_client(accessed)
+            elif msg['CODE'] == ApplicationStates.DELETE_REC.value:
+                if adr in account_tracker:
+                    print('test')
+                else:
+                    accessed = {
+                        "Tag":0
+                    }
+                    send_client(accessed)
             #Disconnect from server
             elif msg['CODE'] == ApplicationStates.DISCONNECT.value:
                 if adr in account_tracker:

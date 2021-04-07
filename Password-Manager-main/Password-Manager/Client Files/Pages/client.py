@@ -260,15 +260,81 @@ def ver():
     result = send(ApplicationStates.VERIFY.value)
     return result
 
+def send_account(rec_username,sevice_id):
+    '''
+    Sends the account
+    
+    Rec_username: the other account
+    service_id: account want to send
+    
+    Result
+    Tag = 0 not logged in.
+    Tag:1 Password:password - password for other person
+    Tag:2 recent an account to the same person
+    Tag:3 sent to themselves
+    Tag:4 user does not exist
+    '''
+    result = send(ApplicationStates.SEND_ACCOUNT.value)
+    return result
+    
+def rec_acc ():
+    '''
+    Gets all the sending requests
+    
+    Result
+    Tag 0 - not logged in
+    
+    Tag 1 - success 
+    Info - Array
+    Info[i][0] - sending id
+    info[i][1] -service_id
+    info[i][2] -service_username
+    info[i][3] -service_name
+    '''
+    result = send(ApplicationStates.RECIEVE_ACCOUNTS.value)
+    return result
+
+def rec_acc_pass(rec_username,sevice_id,password):
+    '''
+    
+    Send username
+    service_id
+    Password you think it is
+    
+    Recieve
+    0 - not logged in
+    1 - success
+    2 - failed password
+    '''
+    result = send(ApplicationStates.RECIEVE_ACCOUNT_PASSWORD.value)
+    return result
+
+def get_send_pass(rec_user,service_id):
+    '''
+    Get your sending passwords
+    
+    '''
+    result = send(ApplicationStates.RECIEVE_ACCOUNT_PASSWORD.value)
+    return result
+
+
+
 if __name__ == "__main__":
     #Testing area 
-    # print((login('dad','bod')))
-    # print(setup("John","ASDF"))
-    # print('test')
-    # print(login("John","ASDF"))
-    # print(setup("Jake","ASDF"))
-
+    # print(setup("Dad","Bod"))
+    # print(setup("Jack","ASDF"))
+    # print((login('Jack','ASDF')))
+    # print((login('Dad','Bod')))
+    # print((send(23,'Jack',1)))
     # print(add_service("A","LOL",'ASDFGH'))
+    # print(send(20,"DAD",4))
+    # print((deleteService(1)))
+    # print(send(20,"Jack",6))
+    # print(send(24))
+    # print(send(21))
+    # print(send(22,'Dad',1,"KD3P8BWw$q\\wMNKZ6SY-9Eivh"))
+    # print(send(21))
+
     # print(deleteService(31))
     # print(get_services())
     # print(update_service(32,"A","V","D"))
@@ -278,5 +344,5 @@ if __name__ == "__main__":
     # print(get_services())
     # print(check_service(1))
     # print(delete_account())
-    print(ver())
+    # print(ver())
     print(done())
