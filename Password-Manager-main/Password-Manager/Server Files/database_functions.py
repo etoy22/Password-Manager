@@ -420,3 +420,5 @@ def get_severice_data(user_id,service_id):
   sending_info = cursor.fetchall()
   disconnect(conn)
   return (sending_info)
+
+  

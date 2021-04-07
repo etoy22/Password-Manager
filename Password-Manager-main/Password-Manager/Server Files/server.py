@@ -499,7 +499,15 @@ def handle_client(con,adr):
                     send_client(accessed)
             elif msg['CODE'] == ApplicationStates.DELETE_SENDING.value:
                 if adr in account_tracker:
-                    print('test')
+                    rec_username = msg['FIR']
+                    rec_user_id = get_user_id(rec_username)
+                    service_id = msg['SEC']
+                    user_id = account_tracker[adr]
+                    get_password_sending(user_id,rec_user_id,service_id)
+                    accessed = {
+                        "Tag":1
+                    }
+                    send_client(accessed)
                 else:
                     accessed = {
                         "Tag":0
@@ -507,7 +515,15 @@ def handle_client(con,adr):
                     send_client(accessed)
             elif msg['CODE'] == ApplicationStates.DELETE_REC.value:
                 if adr in account_tracker:
-                    print('test')
+                    send_username = msg['FIR']
+                    send_user_id = get_user_id(send_username)
+                    service_id = msg['SEC']
+                    user_id = account_tracker[adr]
+                    get_password_sending(send_user_id,user_id,service_id)
+                    accessed = {
+                        "Tag":1
+                    }
+                    send_client(accessed)
                 else:
                     accessed = {
                         "Tag":0

@@ -313,6 +313,16 @@ def get_send_pass(rec_user,service_id):
     '''
     Get your sending passwords
     
+    Send
+    Rec_username
+    service_id
+    
+    Recieve:
+    Tag: 0 - not logged in
+    
+    Tag:1 success
+    Info:Array
+    Array[i][0] - password for your sending
     '''
     result = send(ApplicationStates.RECIEVE_ACCOUNT_PASSWORD.value,rec_user,service_id)
     return result
