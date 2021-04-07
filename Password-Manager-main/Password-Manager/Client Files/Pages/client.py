@@ -274,7 +274,7 @@ def send_account(rec_username,sevice_id):
     Tag:3 sent to themselves
     Tag:4 user does not exist
     '''
-    result = send(ApplicationStates.SEND_ACCOUNT.value)
+    result = send(ApplicationStates.SEND_ACCOUNT.value,rec_username,sevice_id)
     return result
     
 def rec_acc ():
@@ -306,7 +306,7 @@ def rec_acc_pass(rec_username,sevice_id,password):
     1 - success
     2 - failed password
     '''
-    result = send(ApplicationStates.RECIEVE_ACCOUNT_PASSWORD.value)
+    result = send(ApplicationStates.RECIEVE_ACCOUNT_PASSWORD.value,rec_username,sevice_id,password)
     return result
 
 def get_send_pass(rec_user,service_id):
@@ -314,7 +314,7 @@ def get_send_pass(rec_user,service_id):
     Get your sending passwords
     
     '''
-    result = send(ApplicationStates.RECIEVE_ACCOUNT_PASSWORD.value)
+    result = send(ApplicationStates.RECIEVE_ACCOUNT_PASSWORD.value,rec_user,service_id)
     return result
 
 
